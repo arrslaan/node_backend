@@ -167,49 +167,55 @@ const logoutUser = asyncHandler(async(req,res)=>{
  
 })
 
-const refreshAccessToken = asyncHandler(async(req,res)=>{
-  const inComingRefreshToken = req.cookies.refreshToken||req.body.refreshToken;
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
-  if(!inComingRefreshToken){
-    throw new ApiError(401, 'No refresh token provided');
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, 'No refresh token provided.');
   }
-try {
-  const decodedToken = jwt.verify(inComingRefreshToken,process.env.REFRESH_TOKEN_SECRET)
-  
-  const user =await User.findOne(decodedToken?._id);
-  
-  if(!user){
-    throw new ApiError(401, 'Invalid refresh token');
-  }
-  
-  if (inComingRefreshToken !==user?.refreshToken) {
-      throw new ApiError(401, 'in valid refresh token');
-  }
-  
-  const {accessToken, newRefreshToken} = await generateAccessAndRefreshToken(user._id)
-  
-   const options ={
-    httpOnly: true,
-    secure:true,
-   }
-  
-   return res
-   .status(200)
-   .cookie("accessToken",accessToken, options)
-   .cookie("refreshToken",newRefreshToken,options)
-   .json(new ApiResponse(
-    200,
-    {
-      accessToken,
-      newRefreshToken
-    },
-    "User token refreshed successfully"
-   ))
-} catch (error) {
-   throw new ApiError(401,"in valid refresh token")
-}
 
-})
+  try {
+    // Verify the refresh token
+    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+    
+    // Find the user by ID from the decoded token
+    const user = await User.findOne({ _id: decodedToken._id });
+    
+    if (!user) {
+      throw new ApiError(401, 'User associated with the refresh token not found.');
+    }
+
+    // Validate the refresh token
+    if (incomingRefreshToken !== user.refreshToken) {
+      throw new ApiError(401, 'Invalid refresh token.');
+    }
+    
+    // Generate new access and refresh tokens
+    const { accessToken, newRefreshToken } = await generateAccessAndRefreshToken(user._id);
+    
+    const options = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' // Ensure secure flag is set in production
+    };
+    
+    return res
+      .status(200)
+      .cookie('accessToken', accessToken, options)
+      .cookie('refreshToken', newRefreshToken, options)
+      .json(new ApiResponse(
+        200,
+        {
+          accessToken,
+          newRefreshToken
+        },
+        'User token refreshed successfully.'
+      ));
+  } catch (error) {
+    // Handle token verification or any other errors
+    throw new ApiError(401, 'Failed to refresh tokens. Please try again.');
+  }
+});
+
 
 
 export {
