@@ -38,22 +38,6 @@ const videoSchema = new Schema(
             default: true
         },
 
-
-
-        likes: {
-            type: Number,
-            default: 0
-        },
-        dislikes: {
-            type: Number,
-            default: 0
-        },
-        comments: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "Comment"
-            }
-        ]
     },
     { timestamps: true }
 );
